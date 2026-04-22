@@ -1,5 +1,11 @@
-# ResumeIQ v2 — Advanced AI Resume Platform
-### Flask + OpenRouter + SQLite + User Auth
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![Flask](https://img.shields.io/badge/Flask-3.0-green)
+![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-orange)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+# ResumeIQ — AI Resume Analyzer
+### Flask + OpenRouter + SQLite + Use  Auth
 
 ---
 
