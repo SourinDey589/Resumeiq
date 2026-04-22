@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ResumeIQ{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="topbar-title">Dashboard</div>
+  <div class="topbar-right">
+    <a href="{{ url_for('analyze_page') }}" class="btn btn-primary" style="padding:8px 18px;font-size:13px">+ New Analysis</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Analyses</div>
+    <div class="stat-val">{{ total }}</div>
+    <div class="stat-sub">resumes reviewed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Average Score</div>
+    <div class="stat-val">{{ avg_score }}</div>
+    <div class="stat-sub">out of 100</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Best Score</div>
+    <div class="stat-val">{{ best_score }}</div>
+    <div class="stat-sub">personal best</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Tools</div>
+    <div class="stat-val">3</div>
+    <div class="stat-sub">available</div>
+  </div>
+</div>
+
+{% if not analyses %}
+<div class="card" style="text-align:center;padding:60px 24px">
+  <div style="font-size:48px;margin-bottom:16px">📄</div>
+  <h3 style="font-size:18px;font-weight:500;margin-bottom:8px">No analyses yet</h3>
+  <p style="color:var(--muted);margin-bottom:24px;font-size:14px">Upload your first resume to get started</p>
+  <a href="{{ url_for('analyze_page') }}" class="btn btn-primary">Analyze My Resume →</a>
+</div>
+{% else %}
+
+<div class="card">
+  <div class="card-title">// Recent Analyses</div>
+  <table class="history-table">
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Score</th>
+        <th>Grammar</th>
+        <th>Skills</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in analyses %}
+      <tr>
+        <td>
+          <span style="font-size:13px;font-weight:500">{{ a.filename }}</span>
+        </td>
+        <td>
+          {% set s = a.overall_score %}
+          <span class="badge {% if s >= 75 %}badge-green{% elif s >= 50 %}badge-amber{% else %}badge-red{% endif %}">
+            {{ s }}/100
+          </span>
+        </td>
+        <td><span style="font-size:13px;color:var(--muted);font-family:'DM Mono',monospace">{{ a.grammar_score }}</span></td>
+        <td><span style="font-size:13px;color:var(--muted);font-family:'DM Mono',monospace">{{ a.skills_score }}</span></td>
+        <td><span style="font-size:12px;color:var(--muted)">{{ a.created_at.strftime('%b %d, %Y') }}</span></td>
+        <td>
+          <a href="{{ url_for('view_analysis', analysis_id=a.id) }}" class="btn btn-outline" style="padding:5px 14px;font-size:12px">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="card" style="text-align:center;padding:28px">
+    <div style="font-size:28px;margin-bottom:12px">🎯</div>
+    <h3 style="font-size:15px;font-weight:500;margin-bottom:6px">Job Description Matcher</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">See how well your resume fits any job</p>
+    <a href="{{ url_for('job_matcher_page') }}" class="btn btn-outline btn-full">Open Matcher</a>
+  </div>
+  <div class="card" style="text-align:center;padding:28px">
+    <div style="font-size:28px;margin-bottom:12px">✉️</div>
+    <h3 style="font-size:15px;font-weight:500;margin-bottom:6px">Cover Letter Generator</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Generate a tailored cover letter in seconds</p>
+    <a href="{{ url_for('cover_letter_page') }}" class="btn btn-outline btn-full">Generate Letter</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

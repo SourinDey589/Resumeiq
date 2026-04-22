@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Cover Letter — ResumeIQ{% endblock %}
+{% block topbar %}<div class="topbar"><div class="topbar-title">Cover Letter Generator</div></div>{% endblock %}
+
+{% block content %}
+<div id="formSection">
+  <div class="card">
+    <div class="card-title">// Configure</div>
+    <div class="form-row">
+      <label>OpenRouter API Key</label>
+      <input type="password" id="apiKey" value="{{ current_user.api_key or '' }}" placeholder="sk-or-v1-...">
+    </div>
+    {% if analyses %}
+    <div class="form-row">
+      <label>Load from previous analysis (optional)</label>
+      <select id="analysisSelect">
+        <option value="">— Select a previous resume —</option>
+        {% for a in analyses %}
+        <option value="{{ a.id }}">{{ a.filename }} (Score: {{ a.overall_score }}) — {{ a.created_at.strftime('%b %d') }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">// Job Details</div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Job Title <span style="color:var(--red)">*</span></label>
+        <input type="text" id="jobTitle" placeholder="e.g. Software Engineer">
+      </div>
+      <div class="form-row">
+        <label>Company Name</label>
+        <input type="text" id="companyName" placeholder="e.g. Google">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Tone</label>
+      <select id="tone">
+        <option value="professional">Professional</option>
+        <option value="enthusiastic">Enthusiastic</option>
+        <option value="formal">Formal</option>
+        <option value="conversational">Conversational</option>
+        <option value="confident">Confident</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Job Description (optional but recommended)</label>
+      <textarea id="jobDesc" rows="5" placeholder="Paste the job description to get a more tailored letter..."></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">// Your Resume</div>
+    <textarea id="resumeText" rows="10" placeholder="Paste your resume text here..."></textarea>
+  </div>
+
+  <div class="alert alert-error" id="errBar"></div>
+  <button class="btn btn-primary" onclick="generateLetter()" id="genBtn">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    Generate Cover Letter
+  </button>
+</div>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="big-spinner"></div>
+  <h3>Writing your cover letter...</h3>
+  <p>AI is crafting a tailored, professional cover letter</p>
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
+
+<div id="resultSection" style="display:none">
+  <div class="card">
+    <div class="card-title">// Generated Cover Letter</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span class="badge badge-green" id="wordCount"></span>
+      <span class="badge badge-blue" id="toneUsed"></span>
+      <span id="subjectLine" style="font-size:13px;color:var(--muted);font-family:'DM Mono',monospace"></span>
+    </div>
+    <div class="cover-letter-box" id="letterContent"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <button onclick="copyLetter()" class="btn btn-primary" style="padding:9px 20px;font-size:13px">Copy Letter</button>
+      <button onclick="downloadLetter()" class="btn btn-outline" style="padding:9px 20px;font-size:13px">Download .txt</button>
+      <button onclick="resetForm()" class="btn btn-outline" style="padding:9px 20px;font-size:13px">Generate Another</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">// Key Points Highlighted</div>
+    <ul style="list-style:none;padding:0" id="keyPoints"></ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let generatedLetter='', letterSubject='';
+
+async function generateLetter(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const resumeText=document.getElementById('resumeText').value.trim();
+  const jobTitle=document.getElementById('jobTitle').value.trim();
+  const err=document.getElementById('errBar');
+  err.style.display='none';
+  if(!apiKey){err.textContent='Please enter your API key.';err.style.display='block';return;}
+  if(!resumeText){err.textContent='Please paste your resume text.';err.style.display='block';return;}
+  if(!jobTitle){err.textContent='Please enter the job title.';err.style.display='block';return;}
+
+  document.getElementById('formSection').style.display='none';
+  document.getElementById('loadingScreen').classList.add('show');
+
+  const fd=new FormData();
+  fd.append('api_key',apiKey);
+  fd.append('resume_text',resumeText);
+  fd.append('job_title',jobTitle);
+  fd.append('company_name',document.getElementById('companyName').value.trim());
+  fd.append('job_description',document.getElementById('jobDesc').value.trim());
+  fd.append('tone',document.getElementById('tone').value);
+  const aid=document.getElementById('analysisSelect')?.value||'';
+  if(aid)fd.append('analysis_id',aid);
+
+  try{
+    const resp=await fetch('/api/cover-letter',{method:'POST',body:fd});
+    const json=await resp.json();
+    document.getElementById('loadingScreen').classList.remove('show');
+    if(json.error){document.getElementById('formSection').style.display='block';err.textContent=json.error;err.style.display='block';return;}
+    renderLetter(json.data);
+  }catch(e){
+    document.getElementById('loadingScreen').classList.remove('show');
+    document.getElementById('formSection').style.display='block';
+    err.textContent='Error: '+e.message;err.style.display='block';
+  }
+}
+
+function renderLetter(r){
+  document.getElementById('resultSection').style.display='block';
+  generatedLetter=r.cover_letter||'';
+  letterSubject=r.subject_line||'';
+  document.getElementById('letterContent').textContent=generatedLetter;
+  document.getElementById('wordCount').textContent=(r.word_count||0)+' words';
+  document.getElementById('toneUsed').textContent=r.tone_used||'Professional';
+  document.getElementById('subjectLine').textContent='Subject: '+(r.subject_line||'');
+  document.getElementById('keyPoints').innerHTML=(r.key_points_used||[]).map(p=>`<li style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--green);flex-shrink:0">✓</span>${p}</li>`).join('');
+}
+
+function copyLetter(){ navigator.clipboard.writeText(generatedLetter).then(()=>alert('Copied!')); }
+
+function downloadLetter(){
+  const blob=new Blob([generatedLetter],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cover_letter.txt';
+  a.click();
+}
+
+function resetForm(){
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('formSection').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+{% endblock %}

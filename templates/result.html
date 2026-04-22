@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Analysis Result — ResumeIQ{% endblock %}
+{% block topbar %}<div class="topbar"><div class="topbar-title">Analysis Result — {{ analysis.filename }}</div><div class="topbar-right"><a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="padding:7px 16px;font-size:13px">← Dashboard</a></div></div>{% endblock %}
+
+{% block content %}
+{% set r = result %}
+{% set score = analysis.overall_score %}
+
+<div class="card" style="display:flex;align-items:center;gap:32px">
+  <div class="score-ring-wrap">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8"
+        stroke-linecap="round" stroke-dasharray="263.9"
+        stroke-dashoffset="{{ 263.9 - (score/100)*263.9 }}"/>
+    </svg>
+    <div class="score-center">
+      <div class="score-big">{{ score }}</div>
+      <div class="score-small">/100</div>
+    </div>
+  </div>
+  <div style="flex:1">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;margin-bottom:6px">
+      {% if score >= 80 %}Excellent Resume{% elif score >= 60 %}Good — Needs Refinement{% elif score >= 40 %}Average — Needs Work{% else %}Needs Significant Work{% endif %}
+    </div>
+    <div style="font-size:14px;color:var(--muted)">{{ r.summary or '' }}</div>
+    <div style="margin-top:10px;font-size:12px;color:var(--hint)">Analyzed {{ analysis.created_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">// Score Breakdown</div>
+  {% for label, val, color in [('Grammar', analysis.grammar_score, 'var(--red)'), ('Vocabulary', analysis.vocabulary_score, 'var(--amber)'), ('Skills', analysis.skills_score, 'var(--green)'), ('Structure', analysis.structure_score, 'var(--blue)')] %}
+  <div class="metric-row">
+    <div class="metric-label"><span>{{ label }}</span><span style="font-family:'DM Mono',monospace">{{ val }}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:{{ val }}%;background:{{ color }}"></div></div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if r.grammar_errors %}
+<div class="card">
+  <div class="card-title">// Grammar Issues ({{ r.grammar_errors|length }})</div>
+  {% for e in r.grammar_errors[:5] %}
+  <div class="result-item err" style="margin-bottom:10px">
+    <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--red);text-decoration:line-through;margin-bottom:5px">{{ e.original }}</div>
+    <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--green);margin-bottom:4px">✓ {{ e.corrected }}</div>
+    <div style="font-size:12px;color:var(--muted)">{{ e.explanation }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if r.vocabulary_upgrades %}
+<div class="card">
+  <div class="card-title">// Vocabulary Upgrades</div>
+  {% for v in r.vocabulary_upgrades[:6] %}
+  <div class="vocab-row">
+    <span class="chip chip-old">{{ v.original }}</span>
+    <span style="color:var(--muted)">→</span>
+    <span class="chip chip-new">{{ v.improved }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if r.skills %}
+<div class="card">
+  <div class="card-title">// Skills Detected</div>
+  {% for s in r.skills %}<span class="skill-tag">{{ s }}</span>{% endfor %}
+</div>
+{% endif %}
+
+{% if r.job_matches %}
+<div class="card">
+  <div class="card-title">// Job Matches</div>
+  {% for j in r.job_matches[:4] %}
+  <div class="job-row">
+    <div class="job-pct">{{ j.match_percentage }}%</div>
+    <div class="job-meta">
+      <div class="job-title-text">{{ j.role }}</div>
+      <div class="job-reason">{{ j.reason }}</div>
+      <div class="prog"><div class="prog-fill" style="width:{{ j.match_percentage }}%"></div></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if r.suggestions %}
+<div class="card">
+  <div class="card-title">// Improvement Suggestions</div>
+  {% for s in r.suggestions %}
+  <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border);font-size:14px">
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);min-width:28px;line-height:1.2">{{ '%02d'|format(loop.index) }}</span>
+    <span>{{ s }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div style="display:flex;gap:12px;margin-top:4px">
+  <a href="{{ url_for('job_matcher_page') }}" class="btn btn-primary">Match to a Job →</a>
+  <a href="{{ url_for('cover_letter_page') }}" class="btn btn-outline">Generate Cover Letter</a>
+  <a href="{{ url_for('analyze_page') }}" class="btn btn-outline">New Analysis</a>
+</div>
+{% endblock %}

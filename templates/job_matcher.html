@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Job Matcher — ResumeIQ{% endblock %}
+{% block topbar %}<div class="topbar"><div class="topbar-title">Job Description Matcher</div></div>{% endblock %}
+
+{% block content %}
+<div id="formSection">
+  <div class="card">
+    <div class="card-title">// Configure</div>
+    <div class="form-row">
+      <label>OpenRouter API Key</label>
+      <input type="password" id="apiKey" value="{{ current_user.api_key or '' }}" placeholder="sk-or-v1-...">
+    </div>
+    {% if analyses %}
+    <div class="form-row">
+      <label>Load from previous analysis (optional)</label>
+      <select id="analysisSelect" onchange="loadAnalysis()">
+        <option value="">— Select a previous resume —</option>
+        {% for a in analyses %}
+        <option value="{{ a.id }}">{{ a.filename }} (Score: {{ a.overall_score }}) — {{ a.created_at.strftime('%b %d') }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">// Your Resume</div>
+      <textarea id="resumeText" rows="12" placeholder="Paste your resume text here..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">// Job Description</div>
+      <textarea id="jobDesc" rows="12" placeholder="Paste the full job description here...&#10;&#10;Include: required skills, responsibilities, qualifications..."></textarea>
+    </div>
+  </div>
+
+  <div class="alert alert-error" id="errBar"></div>
+  <button class="btn btn-primary" onclick="doMatch()" id="matchBtn" style="margin-top:4px">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Match Resume to Job
+  </button>
+</div>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="big-spinner"></div>
+  <h3>Comparing resume to job description...</h3>
+  <p>AI is analyzing keyword matches, skill gaps, and compatibility</p>
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
+
+<div id="resultSection" style="display:none">
+  <!-- MATCH SCORE HERO -->
+  <div class="card" style="display:flex;align-items:center;gap:32px">
+    <div class="score-ring-wrap">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+        <circle id="matchCircle" cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8"
+          stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9"
+          style="transition:stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)"/>
+      </svg>
+      <div class="score-center">
+        <div class="score-big" id="matchScore">0</div>
+        <div class="score-small">match</div>
+      </div>
+    </div>
+    <div style="flex:1">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;margin-bottom:8px" id="matchVerdict"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <span class="badge" id="expBadge"></span>
+        <span class="badge" id="eduBadge"></span>
+        <span class="badge" id="toneBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- MATCHED KEYWORDS -->
+    <div class="card">
+      <div class="card-title">// Matched Keywords</div>
+      <div id="matchedKw"></div>
+    </div>
+    <!-- MISSING KEYWORDS -->
+    <div class="card">
+      <div class="card-title">// Missing Keywords</div>
+      <div id="missingKw"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-title">// Strengths for This Job</div>
+      <ul style="list-style:none" id="strengthsList"></ul>
+    </div>
+    <div class="card">
+      <div class="card-title">// Skill Gaps</div>
+      <ul style="list-style:none" id="gapsList"></ul>
+    </div>
+  </div>
+
+  <!-- REWRITE SUMMARY -->
+  <div class="card">
+    <div class="card-title">// AI-Rewritten Resume Summary (tailored for this job)</div>
+    <div class="cover-letter-box" id="rewriteSummary" style="max-height:160px;font-size:14px;line-height:1.7"></div>
+    <button onclick="copyText('rewriteSummary')" class="btn btn-outline" style="margin-top:12px;font-size:13px;padding:8px 16px">Copy Summary</button>
+  </div>
+
+  <!-- RECOMMENDATIONS -->
+  <div class="card">
+    <div class="card-title">// Recommendations to Improve Match</div>
+    <ol style="list-style:none;padding:0" id="recList"></ol>
+  </div>
+
+  <button onclick="resetForm()" class="btn btn-outline" style="margin-top:4px">Try Another Job</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAnalysis(){
+  const id=document.getElementById('analysisSelect').value;
+  if(!id)return;
+  const resp=await fetch('/history/'+id+'/text').catch(()=>null);
+}
+
+async function doMatch(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const resumeText=document.getElementById('resumeText').value.trim();
+  const jobDesc=document.getElementById('jobDesc').value.trim();
+  const err=document.getElementById('errBar');
+  err.style.display='none';
+  if(!apiKey){err.textContent='Please enter your API key.';err.style.display='block';return;}
+  if(!resumeText){err.textContent='Please paste your resume text.';err.style.display='block';return;}
+  if(!jobDesc){err.textContent='Please paste the job description.';err.style.display='block';return;}
+
+  document.getElementById('formSection').style.display='none';
+  document.getElementById('loadingScreen').classList.add('show');
+
+  const fd=new FormData();
+  fd.append('api_key',apiKey);
+  fd.append('resume_text',resumeText);
+  fd.append('job_description',jobDesc);
+  const analysisId=document.getElementById('analysisSelect')?.value||'';
+  if(analysisId)fd.append('analysis_id',analysisId);
+
+  try{
+    const resp=await fetch('/api/job-match',{method:'POST',body:fd});
+    const json=await resp.json();
+    document.getElementById('loadingScreen').classList.remove('show');
+    if(json.error){document.getElementById('formSection').style.display='block';err.textContent=json.error;err.style.display='block';return;}
+    renderMatch(json.data);
+  }catch(e){
+    document.getElementById('loadingScreen').classList.remove('show');
+    document.getElementById('formSection').style.display='block';
+    err.textContent='Error: '+e.message;err.style.display='block';
+  }
+}
+
+function renderMatch(r){
+  document.getElementById('resultSection').style.display='block';
+  const score=r.match_score||0, circ=2*Math.PI*42;
+  setTimeout(()=>{
+    document.getElementById('matchCircle').style.strokeDashoffset=circ-(score/100)*circ;
+    document.getElementById('matchScore').textContent=score+'%';
+  },100);
+  document.getElementById('matchVerdict').textContent=r.verdict||'';
+
+  const expMap={'good':'badge-green','partial':'badge-amber','poor':'badge-red'};
+  document.getElementById('expBadge').className='badge '+(expMap[r.experience_match]||'badge-amber');
+  document.getElementById('expBadge').textContent='Experience: '+r.experience_match;
+  document.getElementById('eduBadge').className='badge badge-blue';
+  document.getElementById('eduBadge').textContent='Education: '+r.education_match;
+  document.getElementById('toneBadge').className='badge badge-purple';
+  document.getElementById('toneBadge').textContent='Tone: '+r.tone_match;
+
+  document.getElementById('matchedKw').innerHTML=(r.matched_keywords||[]).length===0?'<p style="color:var(--muted);font-size:13px">No keywords matched.</p>':(r.matched_keywords||[]).map(k=>`<span class="chip chip-match" style="display:inline-block;margin:3px">${k}</span>`).join('');
+  document.getElementById('missingKw').innerHTML=(r.missing_keywords||[]).length===0?'<p style="color:var(--green);font-size:13px">All keywords matched!</p>':(r.missing_keywords||[]).map(k=>`<span class="chip chip-miss" style="display:inline-block;margin:3px">${k}</span>`).join('');
+
+  document.getElementById('strengthsList').innerHTML=(r.strengths||[]).map(s=>`<li style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--green);flex-shrink:0">✓</span>${s}</li>`).join('');
+  document.getElementById('gapsList').innerHTML=(r.gaps||[]).map(g=>`<li style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--red);flex-shrink:0">✗</span>${g}</li>`).join('');
+
+  document.getElementById('rewriteSummary').textContent=r.rewrite_summary||'';
+  document.getElementById('recList').innerHTML=(r.recommendations||[]).map((rec,i)=>`<li style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);min-width:28px;line-height:1.2">${String(i+1).padStart(2,'0')}</span><span>${rec}</span></li>`).join('');
+}
+
+function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); }
+function resetForm(){ document.getElementById('resultSection').style.display='none'; document.getElementById('formSection').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
+</script>
+{% endblock %}

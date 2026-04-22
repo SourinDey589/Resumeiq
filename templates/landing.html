@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeIQ — AI Resume Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090f;--surface:#111118;--surface2:#17171f;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#ededf5;--muted:#7a7a90;--hint:#3f3f55;--green:#00e5a0;--green-dim:rgba(0,229,160,0.1);--green-b:rgba(0,229,160,0.22);--red:#ff5a5a;--blue:#4d9fff;--amber:#f5a623;--r:14px;--rm:10px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;background:rgba(9,9,15,0.88);backdrop-filter:blur(12px)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--green);text-decoration:none}.logo span{color:var(--text)}
+.nav-links{display:flex;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:var(--rm);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:none;transition:all 0.15s;border:none}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}.btn-outline:hover{border-color:var(--green);color:var(--green)}
+.btn-primary{background:var(--green);color:#000}.btn-primary:hover{opacity:0.88}
+.hero{text-align:center;padding:100px 24px 80px;background:radial-gradient(ellipse 90% 60% at 50% 0,rgba(0,229,160,0.07) 0,transparent 65%)}
+.hero-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;color:var(--green);border:1px solid var(--green-b);padding:5px 16px;border-radius:20px;margin-bottom:28px;letter-spacing:1px}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,9vw,108px);line-height:0.92;letter-spacing:2px;margin-bottom:24px}
+.hero h1 em{color:var(--green);font-style:normal}
+.hero p{font-size:18px;color:var(--muted);max-width:520px;margin:0 auto 40px;font-weight:300;line-height:1.6}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.features{max-width:1000px;margin:0 auto;padding:60px 24px}
+.features-title{text-align:center;margin-bottom:48px}
+.features-title h2{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:1px;margin-bottom:8px}
+.features-title p{color:var(--muted);font-size:15px}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px}
+.feat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.feat-icon svg{width:20px;height:20px;stroke-width:1.8;fill:none}
+.feat-card h3{font-size:16px;font-weight:500;margin-bottom:8px}
+.feat-card p{font-size:13px;color:var(--muted);line-height:1.6}
+.cta{text-align:center;padding:80px 24px;background:radial-gradient(ellipse 70% 50% at 50% 100%,rgba(0,229,160,0.06) 0,transparent 70%)}
+.cta h2{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:1px;margin-bottom:16px}
+.cta p{color:var(--muted);margin-bottom:32px;font-size:16px}
+footer{text-align:center;padding:32px;border-top:1px solid var(--border);color:var(--hint);font-size:13px}
+footer span{color:var(--green)}
+@media(max-width:640px){nav{padding:16px 20px}.features-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">Resume<span>IQ</span></a>
+  <div class="nav-links">
+    <a href="/login" class="btn btn-outline">Sign In</a>
+    <a href="/register" class="btn btn-primary">Get Started Free</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">FREE · AI-POWERED · OPENROUTER</div>
+  <h1>Your Resume,<br><em>Perfected</em></h1>
+  <p>Upload your resume and get instant AI feedback on grammar, vocabulary, skills, ATS compatibility, and job matching.</p>
+  <div class="hero-btns">
+    <a href="/register" class="btn btn-primary" style="font-size:16px;padding:14px 32px">Start Analyzing Free →</a>
+    <a href="/login" class="btn btn-outline" style="font-size:16px;padding:14px 32px">Sign In</a>
+  </div>
+</div>
+
+<div class="features">
+  <div class="features-title">
+    <h2>Everything You Need</h2>
+    <p>Three powerful tools to land your dream job</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(0,229,160,0.1)">
+        <svg stroke="#00e5a0" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <h3>Resume Analyzer</h3>
+      <p>Get a detailed score on grammar, vocabulary, skills, structure, and ATS compatibility with actionable fixes.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(77,159,255,0.1)">
+        <svg stroke="#4d9fff" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <h3>Job Description Matcher</h3>
+      <p>Paste any job description and instantly see your match score, missing keywords, and skill gaps.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(245,166,35,0.1)">
+        <svg stroke="#f5a623" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <h3>Cover Letter Generator</h3>
+      <p>Generate a tailored, professional cover letter in seconds based on your resume and target job.</p>
+    </div>
+  </div>
+</div>
+
+<div class="cta">
+  <h2>Ready to Get Hired?</h2>
+  <p>Join thousands of students and professionals improving their resumes with AI.</p>
+  <a href="/register" class="btn btn-primary" style="font-size:16px;padding:14px 36px">Create Free Account →</a>
+</div>
+
+<footer>Built with <span>♥</span> using OpenRouter Free AI · No credit card required</footer>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if mode == 'login' %}Sign In{% else %}Create Account{% endif %} — ResumeIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090f;--surface:#111118;--surface2:#17171f;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#ededf5;--muted:#7a7a90;--hint:#3f3f55;--green:#00e5a0;--green-dim:rgba(0,229,160,0.1);--green-b:rgba(0,229,160,0.22);--red:#ff5a5a;--red-dim:rgba(255,90,90,0.1);--r:14px;--rm:10px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;background-image:radial-gradient(ellipse 70% 50% at 50% 0,rgba(0,229,160,0.06) 0,transparent 60%)}
+.auth-wrap{width:100%;max-width:420px;padding:24px}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;text-decoration:none;margin-bottom:28px;transition:color 0.15s}
+.back-link:hover{color:var(--green)}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:36px}
+.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--green);margin-bottom:4px}.auth-logo span{color:var(--text)}
+.auth-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+.form-row{margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:7px}
+input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rm);padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color 0.2s}
+input:focus{border-color:var(--green)}
+input::placeholder{color:var(--hint)}
+.btn{display:block;width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:var(--rm);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity 0.15s;margin-top:20px}
+.btn:hover{opacity:0.88}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.switch{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.switch a{color:var(--green);text-decoration:none}
+.error-bar{background:var(--red-dim);border:1px solid rgba(255,90,90,0.25);border-radius:var(--rm);padding:10px 14px;color:var(--red);font-size:13px;margin-bottom:16px;display:none}
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,0.2);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <a href="/" class="back-link">← Back to home</a>
+  <div class="auth-card">
+    <div class="auth-logo">Resume<span>IQ</span></div>
+    <div class="auth-sub">{% if mode == 'login' %}Welcome back — sign in to continue{% else %}Create your free account{% endif %}</div>
+
+    <div class="error-bar" id="errorBar"></div>
+
+    {% if mode == 'register' %}
+    <div class="form-row">
+      <label>Full Name</label>
+      <input type="text" id="name" placeholder="Your full name" autocomplete="name">
+    </div>
+    {% endif %}
+    <div class="form-row">
+      <label>Email Address</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="{% if mode == 'register' %}Min 6 characters{% else %}Your password{% endif %}" autocomplete="{% if mode == 'login' %}current-password{% else %}new-password{% endif %}">
+    </div>
+
+    <button class="btn" id="submitBtn" onclick="submit()">
+      {% if mode == 'login' %}Sign In{% else %}Create Account{% endif %}
+    </button>
+
+    <div class="switch">
+      {% if mode == 'login' %}
+        Don't have an account? <a href="/register">Sign up free</a>
+      {% else %}
+        Already have an account? <a href="/login">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<script>
+const MODE = '{{ mode }}';
+document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') submit(); });
+
+async function submit() {
+  const btn = document.getElementById('submitBtn');
+  const err = document.getElementById('errorBar');
+  err.style.display = 'none';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const name = MODE === 'register' ? document.getElementById('name').value.trim() : null;
+
+  if (!email || !password) { showError('Please fill in all fields.'); return; }
+  if (MODE === 'register' && !name) { showError('Please enter your name.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Please wait...';
+
+  const fd = new FormData();
+  fd.append('email', email);
+  fd.append('password', password);
+  if (name) fd.append('name', name);
+
+  try {
+    const resp = await fetch(MODE === 'login' ? '/login' : '/register', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (data.error) { showError(data.error); btn.disabled=false; btn.innerHTML = MODE === 'login' ? 'Sign In' : 'Create Account'; }
+    else { window.location.href = data.redirect; }
+  } catch(e) {
+    showError('Network error. Please try again.');
+    btn.disabled=false; btn.innerHTML = MODE === 'login' ? 'Sign In' : 'Create Account';
+  }
+}
+
+function showError(msg) {
+  const e = document.getElementById('errorBar');
+  e.textContent = msg; e.style.display = 'block';
+}
+</script>
+</body>
+</html>

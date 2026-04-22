@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Analyze Resume — ResumeIQ{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="topbar-title">Analyze Resume</div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="formSection">
+  <div class="card">
+    <div class="card-title">// OpenRouter API Key</div>
+    <div class="form-row">
+      <label>API Key <span style="color:var(--red)">*</span></label>
+      <div style="position:relative">
+        <input type="password" id="apiKey" value="{{ current_user.api_key or '' }}" placeholder="sk-or-v1-...">
+        <button onclick="toggleKey()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div style="font-size:12px;color:var(--hint);margin-top:6px">Get free key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--green)">openrouter.ai/keys</a> — no credit card needed</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">// Upload Resume</div>
+    <div class="upload-zone" id="dropzone">
+      <input type="file" id="fileInput" accept=".pdf,.docx,.txt">
+      <div style="width:48px;height:48px;background:var(--green-dim);border:1px solid var(--green-b);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <svg width="22" height="22" fill="none" stroke="var(--green)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h4>Drop your resume here</h4>
+      <p>or click to browse</p>
+      <div class="ft-row"><span class="ft">PDF</span><span class="ft">DOCX</span><span class="ft">TXT</span></div>
+    </div>
+    <div class="file-pill" id="filePill" style="display:none">
+      <svg width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="file-pill-name" id="fileName"></span>
+      <button class="file-pill-remove" onclick="removeFile()">×</button>
+    </div>
+    <div class="or-divider"><span>OR PASTE TEXT</span></div>
+    <textarea id="pasteText" rows="8" placeholder="Paste your resume text here..."></textarea>
+    <div class="alert alert-error" id="errBar"></div>
+    <button class="btn btn-primary btn-full" id="analyzeBtn" onclick="doAnalyze()" style="margin-top:16px">Analyze Resume →</button>
+  </div>
+</div>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="big-spinner"></div>
+  <h3 id="loadingStep">Processing resume...</h3>
+  <p>AI is reviewing your resume carefully</p>
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
+
+<div id="resultSection" style="display:none">
+  <!-- SCORE HERO -->
+  <div class="card" style="display:flex;align-items:center;gap:32px;background-image:radial-gradient(ellipse 50% 80% at 80% 50%,rgba(0,229,160,0.05),transparent)">
+    <div class="score-ring-wrap">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+        <circle id="scoreCircle" cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8"
+          stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9"
+          style="transition:stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)"/>
+      </svg>
+      <div class="score-center">
+        <div class="score-big" id="scoreNum">0</div>
+        <div class="score-small">/100</div>
+      </div>
+    </div>
+    <div style="flex:1">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;margin-bottom:6px" id="scoreLabel"></div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.5" id="scoreSummary"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="sectionBadges"></div>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="card">
+    <div class="card-title">// Score Breakdown</div>
+    <div class="metric-row"><div class="metric-label"><span>Grammar</span><span id="gScore">0</span></div><div class="bar-track"><div class="bar-fill" id="gBar" style="background:var(--red)"></div></div></div>
+    <div class="metric-row"><div class="metric-label"><span>Vocabulary</span><span id="vScore">0</span></div><div class="bar-track"><div class="bar-fill" id="vBar" style="background:var(--amber)"></div></div></div>
+    <div class="metric-row"><div class="metric-label"><span>Skills</span><span id="sScore">0</span></div><div class="bar-track"><div class="bar-fill" id="sBar" style="background:var(--green)"></div></div></div>
+    <div class="metric-row" style="margin-bottom:0"><div class="metric-label"><span>Structure</span><span id="stScore">0</span></div><div class="bar-track"><div class="bar-fill" id="stBar" style="background:var(--blue)"></div></div></div>
+  </div>
+
+  <!-- ATS -->
+  <div class="card" id="atsCard">
+    <div class="card-title">// ATS Compatibility</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--green)" id="atsScore">0</div>
+      <div style="font-size:13px;color:var(--muted)">/100 ATS Score</div>
+    </div>
+    <div id="atsIssues"></div>
+  </div>
+
+  <!-- GRAMMAR -->
+  <div class="card" id="grammarCard">
+    <div class="card-title">// Grammar Issues</div>
+    <div id="grammarList"></div>
+  </div>
+
+  <!-- VOCAB -->
+  <div class="card" id="vocabCard">
+    <div class="card-title">// Vocabulary Upgrades</div>
+    <div id="vocabList"></div>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="card">
+    <div class="card-title">// Detected Skills</div>
+    <div id="skillsList"></div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="card">
+    <div class="card-title">// Job Role Matches</div>
+    <div id="jobList"></div>
+  </div>
+
+  <!-- SUGGESTIONS -->
+  <div class="card">
+    <div class="card-title">// Improvement Suggestions</div>
+    <ol style="padding-left:0;list-style:none" id="sugList"></ol>
+  </div>
+
+  <div style="display:flex;gap:12px;margin-top:4px">
+    <button onclick="resetForm()" class="btn btn-outline">Analyze Another</button>
+    <a id="matcherLink" href="{{ url_for('job_matcher_page') }}" class="btn btn-primary">Match to a Job →</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const STEPS = ['Extracting text...','Analyzing grammar...','Checking vocabulary...','Matching job roles...','Generating report...'];
+let stepIdx=0, stepTimer=null, selectedFile=null;
+
+document.getElementById('fileInput').addEventListener('change', e => { if(e.target.files[0]) setFile(e.target.files[0]); });
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0]);});
+
+function setFile(f){ selectedFile=f; document.getElementById('fileName').textContent=f.name; document.getElementById('filePill').style.display='flex'; }
+function removeFile(){ selectedFile=null; document.getElementById('fileInput').value=''; document.getElementById('filePill').style.display='none'; }
+function toggleKey(){ const i=document.getElementById('apiKey'); i.type=i.type==='password'?'text':'password'; }
+
+async function doAnalyze(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const pasteText=document.getElementById('pasteText').value.trim();
+  const err=document.getElementById('errBar');
+  err.style.display='none';
+  if(!apiKey){err.textContent='Please enter your OpenRouter API key.';err.style.display='block';return;}
+  if(!selectedFile&&!pasteText){err.textContent='Please upload a file or paste resume text.';err.style.display='block';return;}
+
+  document.getElementById('formSection').style.display='none';
+  document.getElementById('loadingScreen').classList.add('show');
+  stepIdx=0; document.getElementById('loadingStep').textContent=STEPS[0];
+  stepTimer=setInterval(()=>{stepIdx=Math.min(stepIdx+1,STEPS.length-1);document.getElementById('loadingStep').textContent=STEPS[stepIdx];},1800);
+
+  const fd=new FormData();
+  fd.append('api_key',apiKey);
+  if(selectedFile)fd.append('file',selectedFile);
+  if(pasteText)fd.append('text',pasteText);
+
+  try{
+    const resp=await fetch('/api/analyze',{method:'POST',body:fd});
+    const json=await resp.json();
+    clearInterval(stepTimer);
+    document.getElementById('loadingScreen').classList.remove('show');
+    if(json.error){document.getElementById('formSection').style.display='block';err.textContent=json.error;err.style.display='block';return;}
+    renderResult(json.data);
+  }catch(e){
+    clearInterval(stepTimer);
+    document.getElementById('loadingScreen').classList.remove('show');
+    document.getElementById('formSection').style.display='block';
+    err.textContent='Network error: '+e.message;err.style.display='block';
+  }
+}
+
+function renderResult(r){
+  document.getElementById('resultSection').style.display='block';
+  const circ=2*Math.PI*42, score=r.overall_score||0;
+  setTimeout(()=>{
+    document.getElementById('scoreCircle').style.strokeDashoffset=circ-(score/100)*circ;
+    document.getElementById('scoreNum').textContent=score;
+  },100);
+  const lbl=score>=80?'Excellent Resume':score>=60?'Good — Needs Refinement':score>=40?'Average — Improvements Needed':'Needs Significant Work';
+  document.getElementById('scoreLabel').textContent=lbl;
+  document.getElementById('scoreSummary').textContent=r.summary||'';
+
+  const badges=[];
+  (r.sections_found||[]).forEach(s=>badges.push(`<span class="badge badge-green">${s}</span>`));
+  (r.sections_missing||[]).forEach(s=>badges.push(`<span class="badge badge-red">Missing: ${s}</span>`));
+  document.getElementById('sectionBadges').innerHTML=badges.join('');
+
+  const ms=[['gScore','gBar',r.grammar_score],['vScore','vBar',r.vocabulary_score],['sScore','sBar',r.skills_score],['stScore','stBar',r.structure_score]];
+  ms.forEach(([id,bar,val])=>{document.getElementById(id).textContent=val||0;setTimeout(()=>{document.getElementById(bar).style.width=(val||0)+'%';},200);});
+
+  document.getElementById('atsScore').textContent=r.ats_score||0;
+  const atsIssues=r.ats_issues||[];
+  document.getElementById('atsIssues').innerHTML=atsIssues.length===0?'<p style="color:var(--muted);font-size:13px">No major ATS issues detected!</p>':atsIssues.map(i=>`<div class="result-item warn" style="margin-bottom:8px;font-size:13px">${i}</div>`).join('');
+
+  const errs=r.grammar_errors||[];
+  document.getElementById('grammarList').innerHTML=errs.length===0?'<p style="color:var(--muted);font-size:13px">No grammar errors found!</p>':errs.map(e=>`<div class="result-item err" style="margin-bottom:10px"><div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--red);text-decoration:line-through;margin-bottom:5px">${e.original}</div><div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--green);margin-bottom:4px">✓ ${e.corrected}</div><div style="font-size:12px;color:var(--muted)">${e.explanation}</div></div>`).join('');
+
+  const vocab=r.vocabulary_upgrades||[];
+  document.getElementById('vocabList').innerHTML=vocab.length===0?'<p style="color:var(--muted);font-size:13px">Vocabulary looks good!</p>':vocab.map(v=>`<div class="vocab-row"><span class="chip chip-old">${v.original}</span><span style="color:var(--muted)">→</span><span class="chip chip-new">${v.improved}</span></div>`).join('');
+
+  document.getElementById('skillsList').innerHTML=(r.skills||[]).map(s=>`<span class="skill-tag">${s}</span>`).join('');
+
+  document.getElementById('jobList').innerHTML=(r.job_matches||[]).map(j=>`<div class="job-row"><div class="job-pct">${j.match_percentage}%</div><div class="job-meta"><div class="job-title-text">${j.role}</div><div class="job-reason">${j.reason}</div><div class="prog"><div class="prog-fill" style="width:${j.match_percentage}%"></div></div></div></div>`).join('');
+
+  document.getElementById('sugList').innerHTML=(r.suggestions||[]).map((s,i)=>`<li style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--green);min-width:28px;line-height:1.2">${String(i+1).padStart(2,'0')}</span><span>${s}</span></li>`).join('');
+}
+
+function resetForm(){
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('formSection').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+{% endblock %}
